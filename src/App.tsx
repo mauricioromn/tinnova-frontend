@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 
 const BACKEND = "http://127.0.0.1:8000"; // Cambia a IP del servidor si aplica
 const LOGO_URL = `${BACKEND}/static/logo.png`;
