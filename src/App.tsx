@@ -1,7 +1,14 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 
-const BACKEND = "http://127.0.0.1:8000"; // Cambia a IP del servidor si aplica
-const LOGO_URL = `${BACKEND}/static/logo.png`;
+/**
+ * URL del backend:
+ * - En producción (Vercel): define VITE_API_URL=https://api.tinnova.pe
+ * - En local: VITE_API_URL=http://localhost:8000
+ */
+const API_URL = import.meta.env.VITE_API_URL || "https://api.tinnova.pe";
+
+/** Logo servido por el frontend (coloca logo.png en /public) */
+const LOGO_URL = "/logo.png";
 
 type SimilarItem = {
   filename: string;
@@ -83,7 +90,7 @@ export default function App() {
   // Carrito
   const [carrito, setCarrito] = useState<CartItem[]>([]);
 
-  // Datos cliente (todos los campos)
+  // Datos cliente
   const [cliente, setCliente] = useState("");
   const [contacto, setContacto] = useState("");
   const [ruc, setRuc] = useState("");
@@ -124,7 +131,7 @@ export default function App() {
       const form = new FormData();
       form.append("imagen", file);
       form.append("top_k", "8");
-      const res = await fetch(`${BACKEND}/buscar-similares-imagen`, {
+      const res = await fetch(`${API_URL}/buscar-similares-imagen`, {
         method: "POST",
         body: form,
       });
@@ -132,7 +139,9 @@ export default function App() {
       const data: ResultadoBusqueda = await res.json();
       setResultados(data.resultados || []);
       const d: Record<string, string> = {};
-      (data.resultados || []).forEach((r) => (d[r.filename] = r.descripcion_sugerida || ""));
+      (data.resultados || []).forEach(
+        (r) => (d[r.filename] = r.descripcion_sugerida || "")
+      );
       setPerCardDesc(d);
     } catch (e) {
       console.error(e);
@@ -151,7 +160,9 @@ export default function App() {
     let pu: number | undefined = undefined;
     const basePU = r.precio_unitario_estimado ?? undefined;
     const puStr = prompt(
-      `Precio unitario (Enter para usar ${basePU != null ? "S/ " + basePU.toFixed(2) : "—"})`,
+      `Precio unitario (Enter para usar ${
+        basePU != null ? "S/ " + basePU.toFixed(2) : "—"
+      })`,
       basePU != null ? String(basePU) : ""
     );
     if (puStr && puStr.trim() !== "") {
@@ -181,7 +192,7 @@ export default function App() {
     try {
       const form = new FormData();
       form.append("imagen", file);
-      const res = await fetch(`${BACKEND}/subir-imagen-custom`, {
+      const res = await fetch(`${API_URL}/subir-imagen-custom`, {
         method: "POST",
         body: form,
       });
@@ -240,7 +251,7 @@ export default function App() {
       })),
     };
 
-    const res = await fetch(`${BACKEND}/generar-proforma`, {
+    const res = await fetch(`${API_URL}/generar-proforma`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -251,7 +262,7 @@ export default function App() {
       return;
     }
     const data = await res.json();
-    setPdfUrl(`${BACKEND}${data.pdf_url}`);
+    setPdfUrl(`${API_URL}${data.pdf_url}`);
     alert(`Proforma ${data.numero} generada`);
   };
 
@@ -382,7 +393,7 @@ export default function App() {
             </button>
           </section>
 
-          {/* 2) Datos del cliente (TODOS LOS CAMPOS, grilla responsiva) */}
+          {/* 2) Datos del cliente */}
           <section style={card}>
             <div style={{ fontWeight: 800, marginBottom: 8 }}>
               2) Datos del cliente
@@ -402,7 +413,6 @@ export default function App() {
                 onChange={(e) => setCliente(e.target.value)}
               />
 
-              {/* Dos columnas en pantallas anchas */}
               <div
                 style={{
                   display: "grid",
@@ -510,7 +520,7 @@ export default function App() {
             </div>
           </section>
 
-          {/* 3) Carrito amplio */}
+          {/* 3) Carrito */}
           <section style={card}>
             <div style={{ fontWeight: 800, marginBottom: 8 }}>3) Carrito</div>
             {carrito.length === 0 && (
@@ -641,7 +651,12 @@ export default function App() {
                 </div>
 
                 <div style={{ marginTop: 10 }}>
-                  <button style={btnDanger} onClick={() => setCarrito((s) => s.filter((_, i) => i !== idx))}>
+                  <button
+                    style={btnDanger}
+                    onClick={() =>
+                      setCarrito((s) => s.filter((_, i) => i !== idx))
+                    }
+                  >
                     Quitar
                   </button>
                 </div>
@@ -649,7 +664,11 @@ export default function App() {
             ))}
 
             <div style={{ height: 8 }} />
-            <button style={btn} onClick={generarProforma} disabled={carrito.length === 0}>
+            <button
+              style={btn}
+              onClick={generarProforma}
+              disabled={carrito.length === 0}
+            >
               Generar Proforma
             </button>
             {pdfUrl && (
@@ -697,13 +716,19 @@ export default function App() {
                   }}
                 >
                   <img
-                    src={`${BACKEND}${r.url}`}
+                    src={`${API_URL}${r.url}`}
                     alt={r.filename}
-                    style={{ maxWidth: "100%", maxHeight: 180, objectFit: "contain" }}
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: 180,
+                      objectFit: "contain",
+                    }}
                   />
                 </div>
                 <div style={{ padding: 10 }}>
-                  <div style={{ fontWeight: 700, fontSize: 12, color: "#6b7280" }}>
+                  <div
+                    style={{ fontWeight: 700, fontSize: 12, color: "#6b7280" }}
+                  >
                     {r.filename}
                   </div>
                   <div style={{ fontSize: 12, color: "#374151", marginTop: 4 }}>
@@ -722,7 +747,10 @@ export default function App() {
                   <textarea
                     value={perCardDesc[r.filename] ?? ""}
                     onChange={(e) =>
-                      setPerCardDesc((s) => ({ ...s, [r.filename]: e.target.value }))
+                      setPerCardDesc((s) => ({
+                        ...s,
+                        [r.filename]: e.target.value,
+                      }))
                     }
                     style={{ ...textArea, height: 110 }}
                   />
@@ -755,9 +783,11 @@ export default function App() {
                 Agrega este producto con tu descripción y precio unitario.
               </div>
 
-              {/* Línea 1: Descripción ancha */}
+              {/* Descripción */}
               <div style={{ display: "grid", gap: 6, marginBottom: 10 }}>
-                <label style={{ fontSize: 12, color: "#6b7280" }}>Descripción</label>
+                <label style={{ fontSize: 12, color: "#6b7280" }}>
+                  Descripción
+                </label>
                 <textarea
                   style={{ ...textArea, minHeight: 110 }}
                   placeholder="Descripción del producto"
@@ -766,7 +796,7 @@ export default function App() {
                 />
               </div>
 
-              {/* Línea 2: Cantidad + PU + Botón */}
+              {/* Cantidad + PU + Botón */}
               <div
                 style={{
                   display: "grid",
@@ -776,7 +806,9 @@ export default function App() {
                 }}
               >
                 <div style={{ display: "grid", gap: 6 }}>
-                  <label style={{ fontSize: 12, color: "#6b7280" }}>Cantidad</label>
+                  <label style={{ fontSize: 12, color: "#6b7280" }}>
+                    Cantidad
+                  </label>
                   <input
                     style={input}
                     type="text"
@@ -815,13 +847,7 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer
-        style={{
-          padding: 20,
-          textAlign: "center",
-          color: "#6b7280",
-        }}
-      >
+      <footer style={{ padding: 20, textAlign: "center", color: "#6b7280" }}>
         © {new Date().getFullYear()} Tinnova S.A.C. — www.tinnova.promo
       </footer>
     </div>
