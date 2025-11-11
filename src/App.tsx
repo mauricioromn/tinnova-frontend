@@ -8,6 +8,7 @@ import { supabase } from "./lib/supabaseClient";
  * - En local: VITE_API_URL=http://localhost:8000
  */
 const API_URL = import.meta.env.VITE_API_URL || "https://api.tinnova.pe";
+console.log("API_URL en runtime:", API_URL);
 
 /** Logo servido por el frontend (coloca logo.png en /public) */
 const LOGO_URL = "/logo.png";
@@ -123,7 +124,7 @@ export default function App() {
     } catch (e) {
       console.error("Error al cerrar sesión", e);
     } finally {
-      window.location.href = "/"; // volver a pantalla de login
+      window.location.href = "/"; // volver al login
     }
   };
 
@@ -136,28 +137,57 @@ export default function App() {
     else setPreviewUrl(null);
   };
 
+  // 🔍 ACTUALIZADO: buscarSimilares con logs detallados
   const buscarSimilares = async () => {
-    if (!file) return alert("Sube una imagen primero");
+    if (!file) {
+      alert("Sube una imagen primero");
+      return;
+    }
+
+    console.log("👉 API_URL usada:", API_URL);
+    console.log("👉 Enviando a:", `${API_URL}/buscar-similares-imagen`);
+
     setLoading(true);
+
     try {
       const form = new FormData();
       form.append("imagen", file);
       form.append("top_k", "8");
+
       const res = await fetch(`${API_URL}/buscar-similares-imagen`, {
         method: "POST",
         body: form,
       });
-      if (!res.ok) throw new Error(await res.text());
+
+      console.log("👉 Respuesta HTTP:", res.status, res.statusText);
+
+      if (!res.ok) {
+        const txt = await res.text();
+        console.error("❌ Error respuesta backend:", txt);
+        alert(`Error buscando similares: ${res.status}`);
+        return;
+      }
+
       const data: ResultadoBusqueda = await res.json();
-      setResultados(data.resultados || []);
+      console.log("✅ Data recibida:", data);
+
+      const items = data.resultados || [];
+      setResultados(items);
+
       const d: Record<string, string> = {};
-      (data.resultados || []).forEach(
-        (r) => (d[r.filename] = r.descripcion_sugerida || "")
-      );
+      items.forEach((r) => {
+        d[r.filename] = r.descripcion_sugerida || "";
+      });
       setPerCardDesc(d);
+
+      if (items.length === 0) {
+        alert(
+          "No se encontraron coincidencias. Puede que la base_visual.csv esté vacía o sin matches."
+        );
+      }
     } catch (e) {
-      console.error(e);
-      alert("Error buscando similares");
+      console.error("❌ Error en fetch buscar-similares-imagen:", e);
+      alert("Error de conexión con el servidor.");
     } finally {
       setLoading(false);
     }
@@ -304,7 +334,7 @@ export default function App() {
             gap: 16,
           }}
         >
-          {/* Bloque logo + título */}
+          {/* Logo + título */}
           <div
             style={{
               display: "flex",
@@ -779,11 +809,21 @@ export default function App() {
                 </div>
                 <div style={{ padding: 10 }}>
                   <div
-                    style={{ fontWeight: 700, fontSize: 12, color: "#6b7280" }}
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 12,
+                      color: "#6b7280",
+                    }}
                   >
                     {r.filename}
                   </div>
-                  <div style={{ fontSize: 12, color: "#374151", marginTop: 4 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "#374151",
+                      marginTop: 4,
+                    }}
+                  >
                     Sim: {r.similitud.toFixed(3)}
                   </div>
                   <div style={{ fontSize: 12, color: "#374151" }}>
@@ -793,7 +833,13 @@ export default function App() {
                       : "—"}
                   </div>
 
-                  <div style={{ marginTop: 8, fontSize: 12, fontWeight: 600 }}>
+                  <div
+                    style={{
+                      marginTop: 8,
+                      fontSize: 12,
+                      fontWeight: 600,
+                    }}
+                  >
                     Descripción sugerida
                   </div>
                   <textarea
@@ -831,11 +877,23 @@ export default function App() {
               <div style={{ fontWeight: 800, marginBottom: 4 }}>
                 ¿Ninguna coincide? Usa tu imagen
               </div>
-              <div style={{ color: "#6b7280", fontSize: 12, marginBottom: 10 }}>
+              <div
+                style={{
+                  color: "#6b7280",
+                  fontSize: 12,
+                  marginBottom: 10,
+                }}
+              >
                 Agrega este producto con tu descripción y precio unitario.
               </div>
 
-              <div style={{ display: "grid", gap: 6, marginBottom: 10 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gap: 6,
+                  marginBottom: 10,
+                }}
+              >
                 <label style={{ fontSize: 12, color: "#6b7280" }}>
                   Descripción
                 </label>
@@ -897,7 +955,13 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer style={{ padding: 20, textAlign: "center", color: "#6b7280" }}>
+      <footer
+        style={{
+          padding: 20,
+          textAlign: "center",
+          color: "#6b7280",
+        }}
+      >
         © {new Date().getFullYear()} Tinnova S.A.C. — www.tinnova.promo
       </footer>
     </div>
