@@ -1,4 +1,6 @@
+// src/App.tsx
 import React, { useState } from "react";
+import { supabase } from "./lib/supabaseClient";
 
 /**
  * URL del backend:
@@ -76,7 +78,6 @@ const btnDanger: React.CSSProperties = {
   fontWeight: 700,
 };
 
-/* ===== App ===== */
 export default function App() {
   // Upload & preview
   const [file, setFile] = useState<File | null>(null);
@@ -114,6 +115,17 @@ export default function App() {
 
   // Header
   const [logoError, setLogoError] = useState(false);
+
+  // ===== Logout Supabase =====
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error("Error al cerrar sesión", e);
+    } finally {
+      window.location.href = "/"; // volver a pantalla de login
+    }
+  };
 
   const onFileChange = (f: File | null) => {
     setFile(f);
@@ -251,27 +263,32 @@ export default function App() {
       })),
     };
 
-    const res = await fetch(`${API_URL}/generar-proforma`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      console.error(await res.text());
-      alert("No se pudo generar la proforma");
-      return;
+    try {
+      const res = await fetch(`${API_URL}/generar-proforma`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        console.error(await res.text());
+        alert("No se pudo generar la proforma");
+        return;
+      }
+      const data = await res.json();
+      setPdfUrl(`${API_URL}${data.pdf_url}`);
+      alert(`Proforma ${data.numero} generada`);
+    } catch (e) {
+      console.error(e);
+      alert("Error al generar la proforma");
     }
-    const data = await res.json();
-    setPdfUrl(`${API_URL}${data.pdf_url}`);
-    alert(`Proforma ${data.numero} generada`);
   };
 
   return (
     <div style={{ minHeight: "100vh", background: "#f6f7fb" }}>
-      {/* Header centrado con logo pequeño */}
+      {/* HEADER con logo y botón Cerrar sesión */}
       <header
         style={{
-          padding: "28px 16px",
+          padding: "16px 24px",
           background: "#0f172a",
           color: "#e5e7eb",
           borderBottom: "1px solid #0b1223",
@@ -281,54 +298,89 @@ export default function App() {
           style={{
             maxWidth: 1200,
             margin: "0 auto",
-            display: "grid",
-            placeItems: "center",
-            gap: 10,
-            textAlign: "center",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 16,
           }}
         >
+          {/* Bloque logo + título */}
           <div
             style={{
-              width: 64,
-              height: 64,
-              borderRadius: 16,
-              background: "#ffffff",
-              display: "grid",
-              placeItems: "center",
-              boxShadow: "0 4px 20px rgba(0,0,0,.25)",
-              overflow: "hidden",
-              padding: 8,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
             }}
           >
-            {!logoError ? (
-              <img
-                src={LOGO_URL}
-                alt="Tinnova"
-                style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                onError={() => setLogoError(true)}
-              />
-            ) : (
+            <div
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: 16,
+                background: "#ffffff",
+                display: "grid",
+                placeItems: "center",
+                boxShadow: "0 4px 20px rgba(0,0,0,.25)",
+                overflow: "hidden",
+                padding: 6,
+              }}
+            >
+              {!logoError ? (
+                <img
+                  src={LOGO_URL}
+                  alt="Tinnova"
+                  style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "grid",
+                    placeItems: "center",
+                    color: "#111827",
+                    fontWeight: 800,
+                    fontSize: 20,
+                  }}
+                >
+                  T
+                </div>
+              )}
+            </div>
+            <div>
               <div
                 style={{
-                  width: "100%",
-                  height: "100%",
-                  display: "grid",
-                  placeItems: "center",
-                  color: "#111827",
-                  fontWeight: 800,
-                  fontSize: 22,
+                  fontWeight: 900,
+                  fontSize: 20,
+                  color: "#f8fafc",
+                  lineHeight: 1.1,
                 }}
               >
-                T
+                Tinnova — Cotizador
               </div>
-            )}
+              <div style={{ color: "#9ca3af", fontSize: 12 }}>
+                Búsqueda visual + Proformas PDF
+              </div>
+            </div>
           </div>
-          <div style={{ fontWeight: 900, fontSize: 22, color: "#f8fafc" }}>
-            Tinnova — Cotizador
-          </div>
-          <div style={{ color: "#cbd5e1", fontSize: 13 }}>
-            Búsqueda visual + Proformas PDF
-          </div>
+
+          {/* Botón logout */}
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 999,
+              border: "1px solid #4b5563",
+              background: "transparent",
+              color: "#e5e7eb",
+              fontSize: 12,
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            Cerrar sesión
+          </button>
         </div>
       </header>
 
@@ -783,7 +835,6 @@ export default function App() {
                 Agrega este producto con tu descripción y precio unitario.
               </div>
 
-              {/* Descripción */}
               <div style={{ display: "grid", gap: 6, marginBottom: 10 }}>
                 <label style={{ fontSize: 12, color: "#6b7280" }}>
                   Descripción
@@ -796,7 +847,6 @@ export default function App() {
                 />
               </div>
 
-              {/* Cantidad + PU + Botón */}
               <div
                 style={{
                   display: "grid",
