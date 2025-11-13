@@ -10,6 +10,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Lee ?redirect=/lo-que-sea de la URL
+  const searchParams = new URLSearchParams(window.location.search);
+  const redirect = searchParams.get("redirect") || "/app";
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -32,15 +36,8 @@ export default function LoginPage() {
         return;
       }
 
-      // ======================================
-      // 🔁 Manejo del parámetro redirect
-      // Ej: /login?redirect=/app
-      // ======================================
-      const params = new URLSearchParams(window.location.search);
-      const redirect = params.get("redirect") || "/app";
-
+      // Login OK → ir a la ruta que nos pidieron (por defecto /app)
       window.location.href = redirect;
-
     } catch (err) {
       console.error(err);
       setErrorMsg("Error al iniciar sesión.");
@@ -99,7 +96,6 @@ export default function LoginPage() {
               style={{ width: "70%", height: "70%", objectFit: "contain" }}
             />
           </div>
-
           <div
             style={{
               fontWeight: 800,
@@ -110,7 +106,6 @@ export default function LoginPage() {
           >
             Portal Tinnova
           </div>
-
           <div
             style={{
               fontSize: 12,
@@ -216,9 +211,11 @@ export default function LoginPage() {
             textAlign: "center",
           }}
         >
-          Si necesitas acceso, solicita que tu correo sea invitado por el administrador.
+          Si necesitas acceso, solicita que tu correo sea invitado por el
+          administrador.
         </div>
       </div>
     </div>
   );
 }
+
