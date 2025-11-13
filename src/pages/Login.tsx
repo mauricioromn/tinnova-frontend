@@ -32,8 +32,15 @@ export default function LoginPage() {
         return;
       }
 
-      // Login OK → ir al cotizador
-      window.location.href = "/app";
+      // ======================================
+      // 🔁 Manejo del parámetro redirect
+      // Ej: /login?redirect=/app
+      // ======================================
+      const params = new URLSearchParams(window.location.search);
+      const redirect = params.get("redirect") || "/app";
+
+      window.location.href = redirect;
+
     } catch (err) {
       console.error(err);
       setErrorMsg("Error al iniciar sesión.");
@@ -92,6 +99,7 @@ export default function LoginPage() {
               style={{ width: "70%", height: "70%", objectFit: "contain" }}
             />
           </div>
+
           <div
             style={{
               fontWeight: 800,
@@ -102,6 +110,7 @@ export default function LoginPage() {
           >
             Portal Tinnova
           </div>
+
           <div
             style={{
               fontSize: 12,
@@ -207,12 +216,9 @@ export default function LoginPage() {
             textAlign: "center",
           }}
         >
-          Si necesitas acceso, solicita que tu correo sea invitado por el
-          administrador.
+          Si necesitas acceso, solicita que tu correo sea invitado por el administrador.
         </div>
       </div>
     </div>
   );
 }
-
-    
