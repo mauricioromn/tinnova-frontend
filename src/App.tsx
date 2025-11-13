@@ -10,7 +10,7 @@ import { supabase } from "./lib/supabaseClient";
 const API_URL = import.meta.env.VITE_API_URL || "https://api.tinnova.pe";
 console.log("API_URL en runtime:", API_URL);
 
-/** Logo (coloca logo.png en /public) */
+/** Logo en /public/logo.png */
 const LOGO_URL = "/logo.png";
 
 type SimilarItem = {
@@ -69,6 +69,16 @@ const btn: React.CSSProperties = {
   fontWeight: 700,
 };
 
+const btnDanger: React.CSSProperties = {
+  padding: "10px 14px",
+  borderRadius: 10,
+  border: "none",
+  background: "#dc2626",
+  color: "#fff",
+  cursor: "pointer",
+  fontWeight: 700,
+};
+
 export default function App() {
   // Upload & preview
   const [file, setFile] = useState<File | null>(null);
@@ -78,7 +88,9 @@ export default function App() {
   const [resultados, setResultados] = useState<SimilarItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [perCardDesc, setPerCardDesc] = useState<Record<string, string>>({});
-  const [mensajeResultados, setMensajeResultados] = useState<string | null>(null);
+  const [mensajeResultados, setMensajeResultados] = useState<string | null>(
+    null
+  );
 
   // Carrito
   const [carrito, setCarrito] = useState<CartItem[]>([]);
@@ -100,7 +112,7 @@ export default function App() {
   // PDF
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
-  // “Mi imagen”
+  // Bloque “mi imagen”
   const [miDesc, setMiDesc] = useState("");
   const [miCantidad, setMiCantidad] = useState("");
   const [miPU, setMiPU] = useState("");
@@ -115,6 +127,7 @@ export default function App() {
     } catch (e) {
       console.error("Error al cerrar sesión", e);
     } finally {
+      // ajusta si tu login está en otra ruta
       window.location.href = "/login";
     }
   };
@@ -157,7 +170,7 @@ export default function App() {
       if (!res.ok) {
         const txt = await res.text();
         console.error("❌ Error backend buscar-similares-imagen:", txt);
-        setMensajeResultados("Error al buscar similares.");
+        setMensajeResultados("Error al buscar similares. Revisa el backend.");
         return;
       }
 
@@ -169,7 +182,8 @@ export default function App() {
       if (lista.length === 0) {
         setResultados([]);
         setMensajeResultados(
-          "No se encontraron coincidencias para esta imagen."
+          "No se encontraron coincidencias para esta imagen. " +
+            "Puede que base_visual.csv esté vacía o sin datos para estas imágenes."
         );
         return;
       }
@@ -184,7 +198,7 @@ export default function App() {
     } catch (e) {
       console.error("❌ Error buscando similares:", e);
       setMensajeResultados(
-        "Ocurrió un error buscando similares. Revisa la consola."
+        "Ocurrió un error buscando similares. Revisa la consola del navegador."
       );
     } finally {
       setLoading(false);
@@ -247,7 +261,7 @@ export default function App() {
       });
 
       if (!res.ok) throw new Error(await res.text());
-      const data = await res.json();
+      const data = (await res.json()) as { filename: string; url: string };
 
       setCarrito((s) => [
         ...s,
@@ -264,8 +278,10 @@ export default function App() {
       setMiDesc("");
       setMiCantidad("");
       setMiPU("");
-    } catch {
-      alert("No se pudo usar tu imagen como ítem.");
+      alert("Se agregó tu imagen como ítem al carrito");
+    } catch (e) {
+      console.error(e);
+      alert("No se pudo usar tu imagen como ítem");
     }
   };
 
@@ -308,13 +324,17 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
-      if (!res.ok) return alert("No se pudo generar la proforma");
-
+      console.log("👉 generar-proforma status:", res.status);
+      if (!res.ok) {
+        console.error(await res.text());
+        alert("No se pudo generar la proforma");
+        return;
+      }
       const data = await res.json();
       setPdfUrl(`${API_URL}${data.pdf_url}`);
       alert(`Proforma ${data.numero} generada`);
-    } catch {
+    } catch (e) {
+      console.error(e);
       alert("Error al generar la proforma");
     }
   };
@@ -340,6 +360,7 @@ export default function App() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            gap: 16,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -351,6 +372,7 @@ export default function App() {
                 background: "#ffffff",
                 display: "grid",
                 placeItems: "center",
+                boxShadow: "0 4px 20px rgba(0,0,0,.25)",
                 overflow: "hidden",
                 padding: 6,
               }}
@@ -367,12 +389,30 @@ export default function App() {
                   onError={() => setLogoError(true)}
                 />
               ) : (
-                <div style={{ fontWeight: 900, fontSize: 24 }}>T</div>
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "grid",
+                    placeItems: "center",
+                    color: "#111827",
+                    fontWeight: 800,
+                    fontSize: 20,
+                  }}
+                >
+                  T
+                </div>
               )}
             </div>
-
             <div>
-              <div style={{ fontWeight: 900, fontSize: 20, color: "#fff" }}>
+              <div
+                style={{
+                  fontWeight: 900,
+                  fontSize: 20,
+                  color: "#f8fafc",
+                  lineHeight: 1.1,
+                }}
+              >
                 Tinnova — Cotizador
               </div>
               <div style={{ color: "#9ca3af", fontSize: 12 }}>
@@ -391,6 +431,7 @@ export default function App() {
               color: "#e5e7eb",
               fontSize: 12,
               cursor: "pointer",
+              fontWeight: 600,
             }}
           >
             Cerrar sesión
@@ -412,17 +453,16 @@ export default function App() {
       >
         {/* IZQUIERDA */}
         <div style={{ display: "grid", gap: 16 }}>
+          {/* 1) Upload */}
           <section style={card}>
             <div style={{ fontWeight: 800, marginBottom: 8 }}>
               1) Buscar imágenes similares
             </div>
-
             <input
               type="file"
               accept="image/*"
               onChange={(e) => onFileChange(e.target.files?.[0] || null)}
             />
-
             {previewUrl && (
               <div
                 style={{
@@ -454,14 +494,295 @@ export default function App() {
                 </div>
               </div>
             )}
-
+            <div style={{ height: 8 }} />
             <button style={btn} onClick={buscarSimilares} disabled={loading}>
               {loading ? "Buscando..." : "Buscar similares"}
             </button>
           </section>
+
+          {/* 2) Datos del cliente */}
+          <section style={card}>
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>
+              2) Datos del cliente
+            </div>
+
+            <div style={{ display: "grid", gap: 10 }}>
+              <input
+                style={input}
+                placeholder="Cliente *"
+                value={cliente}
+                onChange={(e) => setCliente(e.target.value)}
+              />
+
+              <div
+                style={{
+                  display: "grid",
+                  gap: 10,
+                  gridTemplateColumns: "1fr 1fr",
+                }}
+              >
+                <input
+                  style={input}
+                  placeholder="Contacto"
+                  value={contacto}
+                  onChange={(e) => setContacto(e.target.value)}
+                />
+                <input
+                  style={input}
+                  placeholder="RUC"
+                  value={ruc}
+                  onChange={(e) => setRuc(e.target.value)}
+                />
+              </div>
+
+              <input
+                style={input}
+                placeholder="Dirección"
+                value={direccion}
+                onChange={(e) => setDireccion(e.target.value)}
+              />
+
+              <div
+                style={{
+                  display: "grid",
+                  gap: 10,
+                  gridTemplateColumns: "1fr 1fr",
+                }}
+              >
+                <input
+                  style={input}
+                  placeholder="Fecha (DD/MM/YYYY)"
+                  value={fecha}
+                  onChange={(e) => setFecha(e.target.value)}
+                />
+                <input
+                  style={input}
+                  placeholder="Tiempo de producción"
+                  value={tiempoProd}
+                  onChange={(e) => setTiempoProd(e.target.value)}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gap: 10,
+                  gridTemplateColumns: "1fr 1fr",
+                }}
+              >
+                <input
+                  style={input}
+                  placeholder="Condiciones de pago"
+                  value={condPago}
+                  onChange={(e) => setCondPago(e.target.value)}
+                />
+                <input
+                  style={input}
+                  placeholder="Entrega"
+                  value={entrega}
+                  onChange={(e) => setEntrega(e.target.value)}
+                />
+              </div>
+
+              <textarea
+                style={{ ...textArea, minHeight: 100 }}
+                placeholder="Observaciones"
+                value={observaciones}
+                onChange={(e) => setObservaciones(e.target.value)}
+              />
+
+              <div
+                style={{
+                  display: "grid",
+                  gap: 10,
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                }}
+              >
+                <input
+                  style={input}
+                  type="number"
+                  placeholder="IGV %"
+                  value={igvPct}
+                  onChange={(e) => setIgvPct(Number(e.target.value))}
+                />
+                <input
+                  style={input}
+                  placeholder="Moneda"
+                  value={moneda}
+                  onChange={(e) => setMoneda(e.target.value)}
+                />
+                <input
+                  style={input}
+                  placeholder="Cotizado por"
+                  value={cotizadoPor}
+                  onChange={(e) => setCotizadoPor(e.target.value)}
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* 3) Carrito */}
+          <section style={card}>
+            <div style={{ fontWeight: 800, marginBottom: 8 }}>3) Carrito</div>
+            {carrito.length === 0 && (
+              <div style={{ color: "#6b7280" }}>No hay items agregados.</div>
+            )}
+            {carrito.map((c, idx) => (
+              <div
+                key={idx}
+                style={{
+                  border: "1px solid #eef0f3",
+                  borderRadius: 12,
+                  padding: 12,
+                  marginBottom: 10,
+                  background: "#fafafa",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    alignItems: "center",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 12,
+                      color: "#6b7280",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      maxWidth: "70%",
+                    }}
+                    title={c.filename}
+                  >
+                    {c.filename}
+                  </div>
+                  {c.is_custom && (
+                    <span
+                      style={{
+                        padding: "2px 8px",
+                        borderRadius: 999,
+                        background: "#eef2ff",
+                        color: "#3730a3",
+                        fontSize: 11,
+                        fontWeight: 700,
+                      }}
+                    >
+                      Custom
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ marginTop: 8 }}>
+                  <label style={{ fontSize: 12, color: "#6b7280" }}>
+                    Descripción (aparecerá en la proforma)
+                  </label>
+                  <textarea
+                    style={{ ...textArea, minHeight: 160 }}
+                    value={c.descripcion}
+                    onChange={(e) =>
+                      setCarrito((s) =>
+                        s.map((x, i) =>
+                          i === idx ? { ...x, descripcion: e.target.value } : x
+                        )
+                      )
+                    }
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "160px 200px",
+                    gap: 10,
+                    marginTop: 8,
+                  }}
+                >
+                  <div>
+                    <label style={{ fontSize: 12, color: "#6b7280" }}>
+                      Cantidad
+                    </label>
+                    <input
+                      style={input}
+                      type="number"
+                      placeholder="Cantidad"
+                      value={c.cantidad}
+                      onChange={(e) =>
+                        setCarrito((s) =>
+                          s.map((x, i) =>
+                            i === idx
+                              ? { ...x, cantidad: Number(e.target.value) }
+                              : x
+                          )
+                        )
+                      }
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 12, color: "#6b7280" }}>
+                      Precio unitario (override)
+                    </label>
+                    <input
+                      style={input}
+                      type="number"
+                      step="0.01"
+                      placeholder="P.U. (descuento)"
+                      value={c.precio_unitario ?? ""}
+                      onChange={(e) =>
+                        setCarrito((s) =>
+                          s.map((x, i) =>
+                            i === idx
+                              ? {
+                                  ...x,
+                                  precio_unitario:
+                                    e.target.value === ""
+                                      ? undefined
+                                      : Number(e.target.value),
+                                }
+                              : x
+                          )
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: 10 }}>
+                  <button
+                    style={btnDanger}
+                    onClick={() =>
+                      setCarrito((s) => s.filter((_, i) => i !== idx))
+                    }
+                  >
+                    Quitar
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            <div style={{ height: 8 }} />
+            <button
+              style={btn}
+              onClick={generarProforma}
+              disabled={carrito.length === 0}
+            >
+              Generar Proforma
+            </button>
+            {pdfUrl && (
+              <div style={{ marginTop: 8 }}>
+                <a href={pdfUrl} target="_blank" rel="noreferrer">
+                  Descargar Proforma
+                </a>
+              </div>
+            )}
+          </section>
         </div>
 
-        {/* DERECHA — RESULTADOS */}
+        {/* DERECHA — Resultados + “Ninguna coincide” */}
         <section style={{ ...card, minHeight: 400 }}>
           <div style={{ fontWeight: 800, marginBottom: 12 }}>Resultados</div>
 
@@ -486,102 +807,163 @@ export default function App() {
             </div>
           )}
 
-          {/* TARJETAS DE RESULTADOS */}
-          <div style={{ display: "grid", gap: 12 }}>
-            {resultados.map((item, idx) => (
+          {/* Tarjetas de resultados */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {resultados.map((r) => (
               <div
-                key={item.filename + idx}
+                key={r.filename}
                 style={{
-                  display: "flex",
-                  gap: 12,
-                  padding: 12,
-                  borderRadius: 12,
-                  border: "1px solid #e5e7eb",
+                  border: "1px solid #eef0f3",
+                  borderRadius: 14,
+                  overflow: "hidden",
                   background: "#fff",
                 }}
               >
-                {/* Imagen */}
                 <div
                   style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: 12,
-                    overflow: "hidden",
-                    border: "1px solid #e5e7eb",
+                    height: 180,
+                    display: "grid",
+                    placeItems: "center",
                     background: "#fafafa",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
                   }}
                 >
                   <img
-                    src={`${API_URL}${item.url}`}
-                    alt={item.descripcion_sugerida || item.filename}
-                    style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                    src={`${API_URL}${r.url}`}
+                    alt={r.filename}
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: 180,
+                      objectFit: "contain",
+                    }}
                   />
                 </div>
-
-                {/* Información */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: "#6b7280", fontSize: 12 }}>
-                    {item.filename}
-                  </div>
-
-                  <div style={{ fontWeight: 600, marginTop: 4 }}>
-                    {item.descripcion_sugerida || "Sin descripción"}
-                  </div>
-
+                <div style={{ padding: 10 }}>
                   <div
-                    style={{
-                      marginTop: 4,
-                      color: "#374151",
-                      fontSize: 13,
-                      display: "flex",
-                      gap: 16,
-                    }}
+                    style={{ fontWeight: 700, fontSize: 12, color: "#6b7280" }}
                   >
-                    <div>
-                      Similitud:{" "}
-                      <b>{(item.similitud * 100).toFixed(1)}%</b>
-                    </div>
-
-                    <div>
-                      Precio estimado:{" "}
-                      {item.precio_unitario_estimado != null ? (
-                        <b>S/ {item.precio_unitario_estimado.toFixed(2)}</b>
-                      ) : (
-                        <i>No disponible</i>
-                      )}
-                    </div>
+                    {r.filename}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#374151", marginTop: 4 }}>
+                    Sim: {r.similitud.toFixed(3)}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#374151" }}>
+                    P.U.:{" "}
+                    {r.precio_unitario_estimado != null
+                      ? `S/ ${r.precio_unitario_estimado.toFixed(2)}`
+                      : "—"}
                   </div>
 
-                  <button
-                    style={{
-                      marginTop: 8,
-                      padding: "6px 10px",
-                      borderRadius: 8,
-                      border: "1px solid #0f172a",
-                      background: "white",
-                      color: "#0f172a",
-                      cursor: "pointer",
-                      fontWeight: 600,
-                      fontSize: 12,
-                    }}
-                    onClick={() => agregarAlCarrito(item)}
-                  >
-                    Agregar al carrito
-                  </button>
+                  <div style={{ marginTop: 8, fontSize: 12, fontWeight: 600 }}>
+                    Descripción sugerida
+                  </div>
+                  <textarea
+                    value={perCardDesc[r.filename] ?? ""}
+                    onChange={(e) =>
+                      setPerCardDesc((s) => ({
+                        ...s,
+                        [r.filename]: e.target.value,
+                      }))
+                    }
+                    style={{ ...textArea, height: 110 }}
+                  />
+
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button
+                      style={btn}
+                      onClick={() =>
+                        agregarAlCarrito({
+                          ...r,
+                          descripcion_sugerida: perCardDesc[r.filename],
+                        })
+                      }
+                    >
+                      Agregar
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
+
+          {/* Bloque: Ninguna coincide */}
+          <div style={{ marginTop: 16 }}>
+            <section style={{ ...card, marginBottom: 0 }}>
+              <div style={{ fontWeight: 800, marginBottom: 4 }}>
+                ¿Ninguna coincide? Usa tu imagen
+              </div>
+              <div style={{ color: "#6b7280", fontSize: 12, marginBottom: 10 }}>
+                Agrega este producto con tu descripción y precio unitario.
+              </div>
+
+              <div style={{ display: "grid", gap: 6, marginBottom: 10 }}>
+                <label style={{ fontSize: 12, color: "#6b7280" }}>
+                  Descripción
+                </label>
+                <textarea
+                  style={{ ...textArea, minHeight: 110 }}
+                  placeholder="Descripción del producto"
+                  value={miDesc}
+                  onChange={(e) => setMiDesc(e.target.value)}
+                />
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "200px 200px 1fr",
+                  gap: 10,
+                  alignItems: "end",
+                }}
+              >
+                <div style={{ display: "grid", gap: 6 }}>
+                  <label style={{ fontSize: 12, color: "#6b7280" }}>
+                    Cantidad
+                  </label>
+                  <input
+                    style={input}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Cantidad"
+                    value={miCantidad}
+                    onChange={(e) => setMiCantidad(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: "grid", gap: 6 }}>
+                  <label style={{ fontSize: 12, color: "#6b7280" }}>
+                    Precio unitario
+                  </label>
+                  <input
+                    style={input}
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="Precio unitario"
+                    value={miPU}
+                    onChange={(e) => setMiPU(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: "grid" }}>
+                  <button style={btn} onClick={usarMiImagenComoItem}>
+                    Agregar mi imagen
+                  </button>
+                </div>
+              </div>
+            </section>
+          </div>
         </section>
       </main>
 
+      {/* Footer */}
       <footer style={{ padding: 20, textAlign: "center", color: "#6b7280" }}>
         © {new Date().getFullYear()} Tinnova S.A.C. — www.tinnova.promo
       </footer>
     </div>
   );
 }
-
