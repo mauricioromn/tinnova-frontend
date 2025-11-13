@@ -69,16 +69,6 @@ const btn: React.CSSProperties = {
   fontWeight: 700,
 };
 
-const btnDanger: React.CSSProperties = {
-  padding: "10px 14px",
-  borderRadius: 10,
-  border: "none",
-  background: "#dc2626",
-  color: "#fff",
-  cursor: "pointer",
-  fontWeight: 700,
-};
-
 export default function App() {
   // Upload & preview
   const [file, setFile] = useState<File | null>(null);
@@ -110,7 +100,7 @@ export default function App() {
   // PDF
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
-  // “Ninguna coincide”
+  // “Mi imagen”
   const [miDesc, setMiDesc] = useState("");
   const [miCantidad, setMiCantidad] = useState("");
   const [miPU, setMiPU] = useState("");
@@ -118,7 +108,7 @@ export default function App() {
   // Header
   const [logoError, setLogoError] = useState(false);
 
-  // ===== Logout Supabase =====
+  /* ===== Logout Supabase ===== */
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -139,6 +129,9 @@ export default function App() {
     else setPreviewUrl(null);
   };
 
+  /* =======================
+     BUSCAR SIMILARES
+  ======================== */
   const buscarSimilares = async () => {
     if (!file) return alert("Sube una imagen primero");
 
@@ -164,7 +157,7 @@ export default function App() {
       if (!res.ok) {
         const txt = await res.text();
         console.error("❌ Error backend buscar-similares-imagen:", txt);
-        setMensajeResultados("Error al buscar similares. Revisa el backend.");
+        setMensajeResultados("Error al buscar similares.");
         return;
       }
 
@@ -176,29 +169,31 @@ export default function App() {
       if (lista.length === 0) {
         setResultados([]);
         setMensajeResultados(
-          "No se encontraron coincidencias para esta imagen. " +
-            "Puede que base_visual.csv esté vacía o sin datos para estas imágenes."
+          "No se encontraron coincidencias para esta imagen."
         );
         return;
       }
 
-      const d: Record<string, string> = {};
+      const mapaDescripciones: Record<string, string> = {};
       lista.forEach((r) => {
-        d[r.filename] = r.descripcion_sugerida || "";
+        mapaDescripciones[r.filename] = r.descripcion_sugerida || "";
       });
 
-      setPerCardDesc(d);
+      setPerCardDesc(mapaDescripciones);
       setResultados(lista);
     } catch (e) {
       console.error("❌ Error buscando similares:", e);
       setMensajeResultados(
-        "Ocurrió un error buscando similares. Revisa la consola del navegador."
+        "Ocurrió un error buscando similares. Revisa la consola."
       );
     } finally {
       setLoading(false);
     }
   };
 
+  /* =======================
+     AGREGAR AL CARRITO
+  ======================== */
   const agregarAlCarrito = (r: SimilarItem) => {
     const cantidadStr = prompt("Cantidad:", "100");
     if (!cantidadStr) return;
@@ -207,12 +202,14 @@ export default function App() {
 
     let pu: number | undefined = undefined;
     const basePU = r.precio_unitario_estimado ?? undefined;
+
     const puStr = prompt(
       `Precio unitario (Enter para usar ${
         basePU != null ? "S/ " + basePU.toFixed(2) : "—"
       })`,
       basePU != null ? String(basePU) : ""
     );
+
     if (puStr && puStr.trim() !== "") {
       const n = Number(puStr);
       if (!isFinite(n) || n < 0) return alert("P.U. inválido");
@@ -229,6 +226,9 @@ export default function App() {
     ]);
   };
 
+  /* =======================
+     USAR MI IMAGEN COMO ITEM
+  ======================== */
   const usarMiImagenComoItem = async () => {
     if (!file) return alert("Primero sube una imagen");
     if (!miDesc.trim()) return alert("Ingresa una descripción");
@@ -240,12 +240,14 @@ export default function App() {
     try {
       const form = new FormData();
       form.append("imagen", file);
+
       const res = await fetch(`${API_URL}/subir-imagen-custom`, {
         method: "POST",
         body: form,
       });
+
       if (!res.ok) throw new Error(await res.text());
-      const data = (await res.json()) as { filename: string; url: string };
+      const data = await res.json();
 
       setCarrito((s) => [
         ...s,
@@ -262,13 +264,14 @@ export default function App() {
       setMiDesc("");
       setMiCantidad("");
       setMiPU("");
-      alert("Se agregó tu imagen como ítem al carrito");
-    } catch (e) {
-      console.error(e);
-      alert("No se pudo usar tu imagen como ítem");
+    } catch {
+      alert("No se pudo usar tu imagen como ítem.");
     }
   };
 
+  /* =======================
+     GENERAR PROFORMA
+  ======================== */
   const generarProforma = async () => {
     if (carrito.length === 0) return alert("Agrega al menos un item");
     if (!cliente.trim()) return alert("Ingresa el nombre del cliente");
@@ -305,21 +308,20 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      console.log("👉 generar-proforma status:", res.status);
-      if (!res.ok) {
-        console.error(await res.text());
-        alert("No se pudo generar la proforma");
-        return;
-      }
+
+      if (!res.ok) return alert("No se pudo generar la proforma");
+
       const data = await res.json();
       setPdfUrl(`${API_URL}${data.pdf_url}`);
       alert(`Proforma ${data.numero} generada`);
-    } catch (e) {
-      console.error(e);
+    } catch {
       alert("Error al generar la proforma");
     }
   };
 
+  /* ============================================================
+     RENDER PRINCIPAL
+  ============================================================ */
   return (
     <div style={{ minHeight: "100vh", background: "#f6f7fb" }}>
       {/* HEADER */}
@@ -338,16 +340,9 @@ export default function App() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            gap: 16,
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div
               style={{
                 width: 52,
@@ -356,7 +351,6 @@ export default function App() {
                 background: "#ffffff",
                 display: "grid",
                 placeItems: "center",
-                boxShadow: "0 4px 20px rgba(0,0,0,.25)",
                 overflow: "hidden",
                 padding: 6,
               }}
@@ -373,30 +367,12 @@ export default function App() {
                   onError={() => setLogoError(true)}
                 />
               ) : (
-                <div
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    display: "grid",
-                    placeItems: "center",
-                    color: "#111827",
-                    fontWeight: 800,
-                    fontSize: 20,
-                  }}
-                >
-                  T
-                </div>
+                <div style={{ fontWeight: 900, fontSize: 24 }}>T</div>
               )}
             </div>
+
             <div>
-              <div
-                style={{
-                  fontWeight: 900,
-                  fontSize: 20,
-                  color: "#f8fafc",
-                  lineHeight: 1.1,
-                }}
-              >
+              <div style={{ fontWeight: 900, fontSize: 20, color: "#fff" }}>
                 Tinnova — Cotizador
               </div>
               <div style={{ color: "#9ca3af", fontSize: 12 }}>
@@ -415,7 +391,6 @@ export default function App() {
               color: "#e5e7eb",
               fontSize: 12,
               cursor: "pointer",
-              fontWeight: 600,
             }}
           >
             Cerrar sesión
@@ -435,18 +410,19 @@ export default function App() {
           alignItems: "start",
         }}
       >
-        {/* Izquierda */}
+        {/* IZQUIERDA */}
         <div style={{ display: "grid", gap: 16 }}>
-          {/* Upload */}
           <section style={card}>
             <div style={{ fontWeight: 800, marginBottom: 8 }}>
               1) Buscar imágenes similares
             </div>
+
             <input
               type="file"
               accept="image/*"
               onChange={(e) => onFileChange(e.target.files?.[0] || null)}
             />
+
             {previewUrl && (
               <div
                 style={{
@@ -478,20 +454,14 @@ export default function App() {
                 </div>
               </div>
             )}
-            <div style={{ height: 8 }} />
+
             <button style={btn} onClick={buscarSimilares} disabled={loading}>
               {loading ? "Buscando..." : "Buscar similares"}
             </button>
           </section>
-
-          {/* Datos cliente */}
-          {/* ... (idéntico a tu versión, ya incluido arriba) ... */}
-
-          {/* Carrito */}
-          {/* ... (ya incluido arriba, sin cambios de lógica) ... */}
         </div>
 
-        {/* Derecha — Resultados */}
+        {/* DERECHA — RESULTADOS */}
         <section style={{ ...card, minHeight: 400 }}>
           <div style={{ fontWeight: 800, marginBottom: 12 }}>Resultados</div>
 
@@ -516,8 +486,95 @@ export default function App() {
             </div>
           )}
 
-          {/* Tarjetas de resultados */}
-          {/* ... (resto igual que tu código, ya pegado arriba) ... */}
+          {/* TARJETAS DE RESULTADOS */}
+          <div style={{ display: "grid", gap: 12 }}>
+            {resultados.map((item, idx) => (
+              <div
+                key={item.filename + idx}
+                style={{
+                  display: "flex",
+                  gap: 12,
+                  padding: 12,
+                  borderRadius: 12,
+                  border: "1px solid #e5e7eb",
+                  background: "#fff",
+                }}
+              >
+                {/* Imagen */}
+                <div
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    border: "1px solid #e5e7eb",
+                    background: "#fafafa",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <img
+                    src={`${API_URL}${item.url}`}
+                    alt={item.descripcion_sugerida || item.filename}
+                    style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                  />
+                </div>
+
+                {/* Información */}
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: "#6b7280", fontSize: 12 }}>
+                    {item.filename}
+                  </div>
+
+                  <div style={{ fontWeight: 600, marginTop: 4 }}>
+                    {item.descripcion_sugerida || "Sin descripción"}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 4,
+                      color: "#374151",
+                      fontSize: 13,
+                      display: "flex",
+                      gap: 16,
+                    }}
+                  >
+                    <div>
+                      Similitud:{" "}
+                      <b>{(item.similitud * 100).toFixed(1)}%</b>
+                    </div>
+
+                    <div>
+                      Precio estimado:{" "}
+                      {item.precio_unitario_estimado != null ? (
+                        <b>S/ {item.precio_unitario_estimado.toFixed(2)}</b>
+                      ) : (
+                        <i>No disponible</i>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    style={{
+                      marginTop: 8,
+                      padding: "6px 10px",
+                      borderRadius: 8,
+                      border: "1px solid #0f172a",
+                      background: "white",
+                      color: "#0f172a",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                      fontSize: 12,
+                    }}
+                    onClick={() => agregarAlCarrito(item)}
+                  >
+                    Agregar al carrito
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
       </main>
 
@@ -527,3 +584,4 @@ export default function App() {
     </div>
   );
 }
+
